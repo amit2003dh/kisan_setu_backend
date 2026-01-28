@@ -29,7 +29,7 @@ const upload = multer({ storage: storage });
 
 app.use(express.json());
 app.use(cors({
-  origin: ["http://localhost:5173", "http://localhost:3000", "http://localhost:3001", "https://kisan-set-frontend-71z4.vercel.app"], // Allow frontend URLs
+  origin: ["http://localhost:5173", "http://localhost:3000", "http://localhost:3001", "https://kisan-set-frontend-71z4.vercel.app", "https://kisan-set-admin-git-main-amit2003dhs-projects.vercel.app"], // Allow frontend URLs
   credentials: true // Allow cookies/headers
 }));
 
