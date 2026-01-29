@@ -29,7 +29,7 @@ const upload = multer({ storage: storage });
 
 app.use(express.json());
 app.use(cors({
-  origin: ["http://localhost:5173", "http://localhost:3000", "http://localhost:3001", "https://kisan-set-frontend-71z4.vercel.app","https://kisan-set-frontend-71z4-co8mb1gb5-amit2003dhs-projects.vercel.app","https://kisan-set-frontend-71z4-git-main-amit2003dhs-projects.vercel.app" ,"https://kisan-setu-admin-git-main-amit2003dhs-projects.vercel.app","https://kisan-setu-admin.vercel.app","https://kisan-setu-admin-eg3qlmw20-amit2003dhs-projects.vercel.app"], // Allow frontend URLs - Updated for Vercel admin
+  origin: ["http://localhost:5173", "http://localhost:3000", "http://localhost:3001", "https://kisan-set-frontend-71z4.vercel.app","https://kisan-set-frontend-71z4-git-main-amit2003dhs-projects.vercel.app" ,"https://kisan-setu-admin-git-main-amit2003dhs-projects.vercel.app","https://kisan-setu-admin.vercel.app"], // Allow frontend URLs - Updated for Vercel admin
   credentials: true // Allow cookies/headers
 }));
 
