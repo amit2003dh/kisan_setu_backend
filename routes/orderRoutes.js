@@ -46,6 +46,7 @@ router.post("/create", authMiddleware, async (req, res) => {
     if (itemType === "crop") {
       console.log("🌾 Looking up crop:", itemId);
       const crop = await Crop.findById(itemId);
+      console.log("🌾 Full crop object:", crop);
       sellerId = crop?.sellerId;
       pickupAddress = crop?.location; // Get pickup location from crop
       actualPrice = crop?.price; // Get actual price from crop
@@ -58,6 +59,7 @@ router.post("/create", authMiddleware, async (req, res) => {
     } else {
       console.log("📦 Looking up product:", itemId);
       const product = await Product.findById(itemId);
+      console.log("📦 Full product object:", product);
       sellerId = product?.sellerId;
       pickupAddress = product?.location; // Get pickup location from product
       actualPrice = product?.price; // Get actual price from product
@@ -67,6 +69,19 @@ router.post("/create", authMiddleware, async (req, res) => {
       console.log("📦 Pickup location:", pickupAddress);
       console.log("📦 Actual price:", actualPrice);
       console.log("📦 Available stock:", availableQuantity);
+    }
+
+    // If no pickup address found, use a default one
+    if (!pickupAddress) {
+      console.log("⚠️ No pickup address found, using default");
+      pickupAddress = {
+        address: "Seller Location",
+        city: "Default City", 
+        state: "Default State",
+        pincode: "000000",
+        lat: 20.5937,
+        lng: 78.9629
+      };
     }
 
     // Use actual price from product/crop instead of request body price
@@ -267,7 +282,7 @@ router.post("/create-from-cart", authMiddleware, async (req, res) => {
     const groupedItems = {};
     
     for (const item of items) {
-      const key = `${item.type}_${item._id}`;
+      const key = `${item.itemType}_${item.itemId}`;
       if (!groupedItems[key]) {
         groupedItems[key] = {
           ...item,
@@ -290,9 +305,10 @@ router.post("/create-from-cart", authMiddleware, async (req, res) => {
       let actualPrice; // Get actual price from product/crop
       let availableQuantity; // Get available quantity for decrease
 
-      if (groupedItem.type === "crop") {
-        console.log("🌾 Looking up crop:", groupedItem._id);
-        const crop = await Crop.findById(groupedItem._id);
+      if (groupedItem.itemType === "crop") {
+        console.log("🌾 Looking up crop:", groupedItem.itemId);
+        const crop = await Crop.findById(groupedItem.itemId);
+        console.log("🌾 Full crop object:", crop);
         sellerId = crop?.sellerId;
         pickupAddress = crop?.location; // Get pickup location from crop
         actualPrice = crop?.price; // Get actual price from crop
@@ -304,8 +320,9 @@ router.post("/create-from-cart", authMiddleware, async (req, res) => {
         console.log("🌾 Available quantity:", availableQuantity);
         console.log("🌾 Total requested quantity:", groupedItem.totalQuantity);
       } else {
-        console.log("📦 Looking up product:", groupedItem._id);
-        const product = await Product.findById(groupedItem._id);
+        console.log("📦 Looking up product:", groupedItem.itemId);
+        const product = await Product.findById(groupedItem.itemId);
+        console.log("📦 Full product object:", product);
         sellerId = product?.sellerId;
         pickupAddress = product?.location; // Get pickup location from product
         actualPrice = product?.price; // Get actual price from product
@@ -318,6 +335,19 @@ router.post("/create-from-cart", authMiddleware, async (req, res) => {
         console.log("📦 Total requested quantity:", groupedItem.totalQuantity);
       }
 
+      // If no pickup address found, use a default one
+      if (!pickupAddress) {
+        console.log("⚠️ No pickup address found, using default");
+        pickupAddress = {
+          address: "Seller Location",
+          city: "Default City",
+          state: "Default State",
+          pincode: "000000",
+          lat: 20.5937,
+          lng: 78.9629
+        };
+      }
+
       // Use actual price from product/crop instead of cart price
       const finalPrice = actualPrice || groupedItem.price;
       console.log("🔍 Final price used for item:", finalPrice);
@@ -325,7 +355,7 @@ router.post("/create-from-cart", authMiddleware, async (req, res) => {
       // Check if enough quantity is available
       if (availableQuantity !== undefined && availableQuantity < groupedItem.totalQuantity) {
         console.error("❌ Insufficient quantity available for item:", {
-          itemId: groupedItem._id,
+          itemId: groupedItem.itemId,
           requested: groupedItem.totalQuantity,
           available: availableQuantity
         });
@@ -333,17 +363,17 @@ router.post("/create-from-cart", authMiddleware, async (req, res) => {
       }
 
       if (!sellerId) {
-        console.error("❌ Seller not found for item:", groupedItem._id);
+        console.error("❌ Seller not found for item:", groupedItem.itemId);
         continue; // Skip this item but continue with others
       }
 
       console.log("✅ Creating order for grouped item:", {
         buyerId: finalBuyerId,
         sellerId,
-        orderType: groupedItem.type === "crop" ? "crop_purchase" : "product_purchase",
+        orderType: groupedItem.itemType === "crop" ? "crop_purchase" : "product_purchase",
         items: [{
-          itemId: groupedItem._id,
-          itemType: groupedItem.type,
+          itemId: groupedItem.itemId,
+          itemType: groupedItem.itemType,
           name: groupedItem.name,
           quantity: groupedItem.totalQuantity, // Use total quantity
           price: finalPrice // Use actual price from product/crop
@@ -368,10 +398,10 @@ router.post("/create-from-cart", authMiddleware, async (req, res) => {
       const order = await Order.create({
         buyerId: finalBuyerId,
         sellerId,
-        orderType: groupedItem.type === "crop" ? "crop_purchase" : "product_purchase",
+        orderType: groupedItem.itemType === "crop" ? "crop_purchase" : "product_purchase",
         items: [{
-          itemId: groupedItem._id,
-          itemType: groupedItem.type,
+          itemId: groupedItem.itemId,
+          itemType: groupedItem.itemType,
           name: groupedItem.name,
           quantity: groupedItem.totalQuantity, // Use total quantity
           price: finalPrice // Use actual price from product/crop
@@ -414,16 +444,16 @@ router.post("/create-from-cart", authMiddleware, async (req, res) => {
 
     console.log("📦 Processing quantity/stock after successful order creation");
     for (const [key, groupedItem] of Object.entries(groupedItems)) {
-      console.log("🔍 Checking groupedItem.type for quantity decrease:", { type: groupedItem.type, itemId: groupedItem._id });
-      if (groupedItem.type === "crop") {
-        console.log("🌾 Decreasing crop quantity:", { itemId: groupedItem._id, quantity: groupedItem.totalQuantity });
+      console.log("🔍 Checking groupedItem.itemType for quantity decrease:", { type: groupedItem.itemType, itemId: groupedItem.itemId });
+      if (groupedItem.itemType === "crop") {
+        console.log("🌾 Decreasing crop quantity:", { itemId: groupedItem.itemId, quantity: groupedItem.totalQuantity });
         console.log("🌾 Current crop before update:");
-        const currentCrop = await Crop.findById(groupedItem._id);
+        const currentCrop = await Crop.findById(groupedItem.itemId);
         console.log("🌾 Crop details:", { id: currentCrop._id, name: currentCrop.name, currentQuantity: currentCrop.quantity });
         
         try {
           const itemPrice = groupedItem.price || 0;
-          await Crop.findByIdAndUpdate(groupedItem._id, { 
+          await Crop.findByIdAndUpdate(groupedItem.itemId, { 
             $inc: { 
               quantity: -groupedItem.totalQuantity,
               "salesStats.totalSold": groupedItem.totalQuantity,
@@ -432,18 +462,18 @@ router.post("/create-from-cart", authMiddleware, async (req, res) => {
           });
           
           console.log("✅ Crop quantity and sales stats updated successfully");
-          const updatedCrop = await Crop.findById(groupedItem._id);
+          const updatedCrop = await Crop.findById(groupedItem.itemId);
           console.log("🌾 Updated crop details:", { id: updatedCrop._id, name: updatedCrop.name, newQuantity: updatedCrop.quantity });
         } catch (cropError) {
           console.error("❌ Error updating crop quantity in cart:", cropError);
           console.error("❌ Cart crop error details:", cropError.message);
         }
       } else {
-        console.log("🔍 groupedItem.type is not 'crop', processing as product. groupedItem.type:", groupedItem.type);
+        console.log("🔍 groupedItem.itemType is not 'crop', processing as product. groupedItem.itemType:", groupedItem.itemType);
         try {
-          console.log("📦 Decreasing product stock:", { itemId: groupedItem._id, quantity: groupedItem.totalQuantity });
+          console.log("📦 Decreasing product stock:", { itemId: groupedItem.itemId, quantity: groupedItem.totalQuantity });
           const itemPrice = groupedItem.price || 0;
-          await Product.findByIdAndUpdate(groupedItem._id, { 
+          await Product.findByIdAndUpdate(groupedItem.itemId, { 
             $inc: { 
               stock: -groupedItem.totalQuantity,
               "salesStats.totalSold": groupedItem.totalQuantity,

@@ -12,8 +12,11 @@ if (GEMINI_API_KEY) {
 
 router.post("/voice-intent", async (req, res) => {
   try {
+    console.log("🎤 Voice intent request received:", req.body);
+    
     // API key check
     if (!GEMINI_API_KEY) {
+      console.error("❌ Gemini API key not configured");
       return res.status(503).json({
         success: false,
         error: "Gemini API not configured",
@@ -24,8 +27,11 @@ router.post("/voice-intent", async (req, res) => {
 
     const { text, prompt } = req.body;
 
+    console.log("📝 Processing voice text:", text);
+
     // Input validation
     if (!text || typeof text !== "string" || text.trim().length === 0) {
+      console.error("❌ Invalid input received");
       return res.status(400).json({
         success: false,
         error: "Invalid input",
@@ -61,6 +67,8 @@ Farmer-Specific Response Guidelines:
 IMPORTANT: Always provide specific, actionable advice that farmers can implement immediately. Avoid vague responses. If you need more information, ask specific questions.
 `;
 
+    console.log("🌐 Making Gemini API call...");
+
     // Gemini REST v1 call (STABLE)
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
@@ -79,17 +87,19 @@ IMPORTANT: Always provide specific, actionable advice that farmers can implement
       }
     );
 
+    console.log("📡 Gemini API response status:", response.status);
+
     const data = await response.json();
 
     // Handle Gemini-side errors
     if (!data.candidates || data.candidates.length === 0) {
       console.warn("⚠️ Gemini returned no candidates:", JSON.stringify(data, null, 2));
 
-      return res.json({
+      return res.status(503).json({
         success: false,
-        error: "Gemini returned no response",
-        message: "AI could not process your request. Please try again.",
-        fallback: true
+        error: "Gemini AI not available",
+        message: "AI service is temporarily unavailable. Please try again later.",
+        fallback: false
       });
     }
 
@@ -97,11 +107,13 @@ IMPORTANT: Always provide specific, actionable advice that farmers can implement
     const intentText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
 
     if (!intentText) {
-      return res.json({
+      console.error("❌ No response text from Gemini");
+
+      return res.status(503).json({
         success: false,
-        error: "No response from Gemini",
-        message: "AI could not generate a response. Please try again.",
-        fallback: true
+        error: "Gemini AI not responding",
+        message: "AI service is temporarily unavailable. Please try again later.",
+        fallback: false
       });
     }
 
@@ -116,11 +128,11 @@ IMPORTANT: Always provide specific, actionable advice that farmers can implement
   } catch (error) {
     console.error("❌ Gemini REST API Error:", error);
 
-    res.status(500).json({
+    res.status(503).json({
       success: false,
       error: "Gemini API Error",
-      message: error.message || "Failed to process Gemini request",
-      fallback: true
+      message: "AI service is temporarily unavailable. Please try again later.",
+      fallback: false
     });
   }
 });

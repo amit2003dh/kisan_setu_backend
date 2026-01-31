@@ -58,6 +58,7 @@ app.use("/api/tracker", require("./routes/trackerRoutes"));
 app.use("/api/chat", require("./routes/chatRoutes"));
 app.use("/api/auth/admin", require("./routes/adminRoutes"));
 app.use("/api/admin", require("./routes/adminRoutes"));
+app.use("/api/crop-analysis", require("./routes/cropAnalysisRoutes"));
 
 // Socket.io AFTER middleware
 const io = new Server(server, {
