@@ -104,12 +104,36 @@ router.get("/", async (req, res) => {
   }
 });
 
-/* -------------------- MY PRODUCTS -------------------- */
+/* -------------------- GET SINGLE PRODUCT -------------------- */
 
 router.get("/my-products", authMiddleware, async (req, res) => {
-  const products = await Product.find({ sellerId: req.userId })
-    .sort({ createdAt: -1 });
-  res.json(products);
+  try {
+    const products = await Product.find({ sellerId: req.userId })
+      .sort({ createdAt: -1 });
+    res.json(products);
+  } catch (error) {
+    console.error("❌ Get my products error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.get("/:id", async (req, res) => {
+  try {
+    console.log("🔍 GET SINGLE PRODUCT - ID:", req.params.id);
+    
+    const product = await Product.findById(req.params.id);
+    
+    if (!product) {
+      console.log("❌ Product not found:", req.params.id);
+      return res.status(404).json({ error: "Product not found" });
+    }
+    
+    console.log("✅ Product found:", product);
+    res.json(product);
+  } catch (error) {
+    console.error("❌ Get single product error:", error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 /* -------------------- UPDATE PRODUCT -------------------- */

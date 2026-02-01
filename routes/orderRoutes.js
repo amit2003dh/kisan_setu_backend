@@ -761,24 +761,182 @@ router.put("/:id/status", authMiddleware, async (req, res) => {
 });
 
 /* ---------------------------------------------------
+   GET SINGLE ORDER BY ID
+--------------------------------------------------- */
+router.get("/:orderId", authMiddleware, async (req, res) => {
+  try {
+    console.log("🔍 GET SINGLE ORDER - ID:", req.params.orderId);
+    
+    const order = await Order.findById(req.params.orderId);
+    
+    if (!order) {
+      console.log("❌ Order not found:", req.params.orderId);
+      return res.status(404).json({ error: "Order not found" });
+    }
+    
+    console.log("✅ Order found:", order._id);
+    res.json(order);
+  } catch (error) {
+    console.error("❌ Get single order error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/* ---------------------------------------------------
    ORDER CHAT
 --------------------------------------------------- */
 router.post("/:orderId/message", authMiddleware, async (req, res) => {
-  const message = await Message.create({
-    orderId: req.params.orderId,
-    senderId: req.userId,
-    senderType: req.body.senderType,
-    content: req.body.message,
-    messageType: "order_communication"
-  });
-
-  res.json({ success: true, message });
+  try {
+    console.log("📝 CREATE MESSAGE - Starting message creation");
+    console.log("🔍 Order ID:", req.params.orderId);
+    console.log("🔍 User ID:", req.userId);
+    console.log("🔍 Request body:", req.body);
+    
+    const { message, senderType } = req.body;
+    
+    console.log("🔍 Extracted data:", { message, senderType });
+    
+    if (!message || !message.trim()) {
+      console.log("❌ Empty message provided");
+      return res.status(400).json({ error: "Message content is required" });
+    }
+    
+    // Default senderType if not provided
+    const finalSenderType = senderType || "buyer";
+    console.log("🔍 Final senderType:", finalSenderType);
+    
+    // Validate senderType against allowed values
+    const allowedSenderTypes = ["buyer", "seller", "delivery_partner", "system", "farmer"];
+    if (!allowedSenderTypes.includes(finalSenderType)) {
+      console.log("❌ Invalid senderType:", finalSenderType);
+      return res.status(400).json({ 
+        error: "Invalid sender type",
+        allowedTypes: allowedSenderTypes,
+        receivedType: finalSenderType
+      });
+    }
+    
+    console.log("📝 Creating message with data:", {
+      orderId: req.params.orderId,
+      senderId: req.userId,
+      senderType: finalSenderType,
+      content: message.trim(),
+      messageType: "order_communication"
+    });
+    
+    const newMessage = await Message.create({
+      orderId: req.params.orderId,
+      senderId: req.userId,
+      senderType: finalSenderType,
+      content: message.trim(),
+      messageType: "order_communication"
+    });
+    
+    console.log("✅ Message created successfully:", newMessage._id);
+    res.json({ success: true, message: newMessage });
+    
+  } catch (error) {
+    console.error("❌ CREATE MESSAGE ERROR:", error);
+    console.error("❌ Error name:", error.name);
+    console.error("❌ Error message:", error.message);
+    if (error.errors) {
+      console.error("❌ Validation errors:", error.errors);
+      Object.keys(error.errors).forEach(key => {
+        console.error(`  - ${key}:`, error.errors[key].message);
+      });
+    }
+    res.status(500).json({ 
+      error: "Failed to send message",
+      details: error.message 
+    });
+  }
 });
 
 router.get("/:orderId/messages", authMiddleware, async (req, res) => {
-  const messages = await Message.find({ orderId: req.params.orderId })
-    .sort({ createdAt: 1 });
-  res.json(messages);
+  try {
+    console.log("📨 GET MESSAGES - Starting message retrieval");
+    console.log("🔍 Order ID:", req.params.orderId);
+    console.log("🔍 User ID:", req.userId);
+    console.log("🔍 User:", req.user);
+    
+    // Get order details to check delivery partner assignment
+    const order = await Order.findById(req.params.orderId);
+    if (!order) {
+      console.log("❌ Order not found:", req.params.orderId);
+      return res.status(404).json({ error: "Order not found" });
+    }
+    
+    console.log("🔍 Order found:", order._id);
+    console.log("🔍 Delivery partner assigned:", !!order.deliveryInfo?.deliveryPartnerId);
+    console.log("🔍 Order buyer:", order.buyerId);
+    console.log("🔍 Order seller:", order.sellerId);
+    
+    const isDeliveryPartnerAssigned = !!order.deliveryInfo?.deliveryPartnerId;
+    const currentUserId = req.userId;
+    const isBuyer = order.buyerId.toString() === currentUserId;
+    const isSeller = order.sellerId.toString() === currentUserId;
+    const isDeliveryPartner = isDeliveryPartnerAssigned && order.deliveryInfo.deliveryPartnerId.toString() === currentUserId;
+    
+    console.log("🔍 User role check:", { isBuyer, isSeller, isDeliveryPartner, isDeliveryPartnerAssigned });
+    
+    // Get all messages for this order with sender details populated
+    const allMessages = await Message.find({ orderId: req.params.orderId })
+      .populate('senderId', 'name email role')
+      .sort({ createdAt: 1 });
+    
+    console.log("📨 Total messages found:", allMessages.length);
+    
+    // TEMPORARY DEBUG: Return all messages without filtering
+    console.log("🐛 DEBUG MODE: Returning all messages without filtering");
+    return res.json(allMessages);
+    
+    // Filter messages based on visibility rules
+    const filteredMessages = allMessages.filter(message => {
+      console.log("🔍 Filtering message:", {
+        messageId: message._id,
+        senderType: message.senderType,
+        content: message.content?.substring(0, 20) + "...",
+        isBuyer,
+        isSeller,
+        isDeliveryPartner,
+        isDeliveryPartnerAssigned
+      });
+      
+      // If delivery partner is assigned, everyone sees all messages
+      if (isDeliveryPartnerAssigned) {
+        console.log("✅ Delivery partner assigned - message visible to all");
+        return true;
+      }
+      
+      // Before delivery partner assignment
+      if (message.senderType === "buyer" || message.senderType === "farmer") {
+        // Buyer/farmer messages visible to seller only
+        const visible = isSeller;
+        console.log(`🔍 ${message.senderType} message visible to seller:`, visible);
+        return visible;
+      } else if (message.senderType === "seller") {
+        // Seller messages visible to buyer only
+        const visible = isBuyer;
+        console.log("🔍 Seller message visible to buyer:", visible);
+        return visible;
+      } else if (message.senderType === "delivery_partner") {
+        // Delivery partner messages only visible after assignment
+        console.log("❌ Delivery partner message before assignment - not visible");
+        return false;
+      } else {
+        // System messages visible to everyone
+        console.log("✅ System message visible to all");
+        return true;
+      }
+    });
+    
+    console.log("📨 Filtered messages count:", filteredMessages.length);
+    res.json(filteredMessages);
+    
+  } catch (error) {
+    console.error("❌ GET MESSAGES ERROR:", error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 module.exports = router;

@@ -32,7 +32,7 @@ app.post("/api/crop-analyze", upload.single("image"), async (req, res) => {
     });
 
     // Use the Gemini model to analyze the crop image
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
     
     try {
       const result = await model.generateContent([

@@ -312,12 +312,24 @@ router.get("/tracking/:deliveryId", async (req, res) => {
       return res.status(404).json({ message: "Order not found" });
     }
 
+    // Get pickup location from order
+    let pickupLocation = null;
+    if (order.deliveryInfo && order.deliveryInfo.pickupAddress) {
+      const pickupAddress = order.deliveryInfo.pickupAddress;
+      pickupLocation = {
+        lat: pickupAddress.lat || 0,
+        lng: pickupAddress.lng || 0,
+        address: `${pickupAddress.address}${pickupAddress.city ? `, ${pickupAddress.city}` : ''}${pickupAddress.state ? `, ${pickupAddress.state}` : ''}${pickupAddress.pincode ? ` - ${pickupAddress.pincode}` : ''}`
+      };
+    }
+
     res.json({
-      currentLocation: order.deliveryPartnerInfo?.currentLocation || {
-        lat: 22.7196,
-        lng: 75.8577,
+      currentLocation: order.deliveryPartnerInfo?.currentLocation || order.deliveryInfo?.currentLocation || {
+        lat: order.deliveryInfo?.pickupAddress?.lat || 22.7196,
+        lng: order.deliveryInfo?.pickupAddress?.lng || 75.8577,
         status: order.status
       },
+      pickupLocation: pickupLocation,
       destination: {
         lat: order.deliveryInfo?.deliveryAddress?.lat,
         lng: order.deliveryInfo?.deliveryAddress?.lng,
@@ -385,6 +397,7 @@ router.get("/tracking/:id", async (req, res) => {
 
     // Get destination from order delivery address
     let destination = null;
+    let pickupLocation = null;
     let customerInfo = null;
     let providerInfo = null;
 
@@ -405,9 +418,19 @@ router.get("/tracking/:id", async (req, res) => {
         };
       }
 
+      // Use pickup address from order as pickup location
+      if (delivery.orderId.deliveryInfo && delivery.orderId.deliveryInfo.pickupAddress) {
+        const pickupAddress = delivery.orderId.deliveryInfo.pickupAddress;
+        pickupLocation = {
+          lat: pickupAddress.lat || 0,
+          lng: pickupAddress.lng || 0,
+          address: `${pickupAddress.address}${pickupAddress.city ? `, ${pickupAddress.city}` : ''}${pickupAddress.state ? `, ${pickupAddress.state}` : ''}${pickupAddress.pincode ? ` - ${pickupAddress.pincode}` : ''}`
+        };
+      }
+
       // Use delivery address from order as destination
-      if (delivery.orderId.deliveryAddress) {
-        const orderAddress = delivery.orderId.deliveryAddress;
+      if (delivery.orderId.deliveryInfo && delivery.orderId.deliveryInfo.deliveryAddress) {
+        const orderAddress = delivery.orderId.deliveryInfo.deliveryAddress;
         destination = {
           lat: orderAddress.lat || 0,
           lng: orderAddress.lng || 0,
@@ -447,6 +470,7 @@ router.get("/tracking/:id", async (req, res) => {
 
     res.json({
       currentLocation,
+      pickupLocation,
       destination,
       customerInfo,
       providerInfo,

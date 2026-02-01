@@ -153,7 +153,7 @@ Important: Be specific and practical in your recommendations. Use simple languag
 
       // Call Gemini Vision API
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1/models/gemini-3-flash-preview:generateContent?key=${GEMINI_API_KEY}`,
         {
           method: "POST",
           headers: {
@@ -306,7 +306,7 @@ Be practical and specific in your recommendations. Use simple language that farm
 `;
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1/models/gemini-3-flash-preview:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: "POST",
         headers: {
@@ -435,7 +435,7 @@ Important: Be practical, specific, and actionable in your advice.
 `;
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1/models/gemini-3-flash-preview:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: "POST",
         headers: {
@@ -589,7 +589,7 @@ Important: Be specific, practical, and regionally relevant. Consider local marke
 `;
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1/models/gemini-3-flash-preview:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: "POST",
         headers: {

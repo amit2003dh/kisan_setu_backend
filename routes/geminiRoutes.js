@@ -68,10 +68,10 @@ IMPORTANT: Always provide specific, actionable advice that farmers can implement
 `;
 
     console.log("🌐 Making Gemini API call...");
-
-    // Gemini REST v1 call (STABLE)
+const MODEL_NAME = "gemini-3-flash-preview";
+    // Gemini REST v1beta call (WORKING)
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: "POST",
         headers: {
@@ -79,10 +79,15 @@ IMPORTANT: Always provide specific, actionable advice that farmers can implement
         },
         body: JSON.stringify({
           contents: [
-            {
-              parts: [{ text: finalPrompt }]
-            }
-          ]
+    {
+      role: "user",
+      parts: [{ text: finalPrompt }]
+    }
+  ],
+  generationConfig: {
+    maxOutputTokens: 250, 
+    temperature: 0.7
+  }
         })
       }
     );
@@ -91,14 +96,19 @@ IMPORTANT: Always provide specific, actionable advice that farmers can implement
 
     const data = await response.json();
 
+    // Log the full error response for debugging
+    if (response.status !== 200) {
+      console.error("❌ Gemini API Error Response:", data);
+    }
+
     // Handle Gemini-side errors
     if (!data.candidates || data.candidates.length === 0) {
-      console.warn("⚠️ Gemini returned no candidates:", JSON.stringify(data, null, 2));
+      console.warn("🔧 Developer: AI unavailable - returning error to user");
 
       return res.status(503).json({
         success: false,
-        error: "Gemini AI not available",
-        message: "AI service is temporarily unavailable. Please try again later.",
+        error: "AI not responding",
+        message: "Voice assistant is temporarily unavailable. Please try again later.",
         fallback: false
       });
     }
