@@ -92,7 +92,7 @@ const orderSchema = new mongoose.Schema(
         lat: Number,
         lng: Number
       }
-    },
+    }, 
 
     // 🕒 Timeline (for tracking UI)
     orderTimeline: [

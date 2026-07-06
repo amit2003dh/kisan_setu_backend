@@ -382,4 +382,72 @@ router.post("/cart", authMiddleware, async (req, res) => {
   }
 });
 
+// Forgot password / Reset password
+router.post("/forgot-password", async (req, res) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({
+        error: "Database not connected",
+        message: "MongoDB is not connected. Please check your database connection."
+      });
+    }
+
+    const { email, phone, newPassword } = req.body;
+
+    if (!email || !phone || !newPassword) {
+      return res.status(400).json({
+        error: "Missing fields",
+        message: "Email, phone number, and new password are required"
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        error: "Weak password",
+        message: "Password must be at least 6 characters long"
+      });
+    }
+
+    // Find user by email
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      return res.status(404).json({
+        error: "User not found",
+        message: "No account registered with this email"
+      });
+    }
+
+    // Check if phone matches
+    if (!user.phone) {
+      return res.status(400).json({
+        error: "No phone registered",
+        message: "This account does not have a registered phone number. Please contact support."
+      });
+    }
+
+    if (user.phone !== phone) {
+      return res.status(400).json({
+        error: "Credentials mismatch",
+        message: "Phone number does not match our records for this email."
+      });
+    }
+
+    // Update password
+    user.password = newPassword;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: "Password reset successfully. You can now login with your new password."
+    });
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    res.status(500).json({
+      error: "Reset failed",
+      message: error.message || "Failed to reset password"
+    });
+  }
+});
+
 module.exports = router;
+

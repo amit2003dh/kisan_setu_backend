@@ -60,11 +60,7 @@ const deliveryPartnerSchema = new mongoose.Schema({
     accountHolderName: String
   },
   // ✅ Verification status
-  isVerified: {
-    type: String,
-    enum: ["pending", "approved", "rejected"],
-    default: "pending"
-  }
+  
 }, {
   timestamps: true
 });
