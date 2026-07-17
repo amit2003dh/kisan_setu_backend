@@ -144,12 +144,28 @@ router.post("/login", async (req, res) => {
     }
 
     // Find user
-    const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+    let user = await User.findOne({ email: email.toLowerCase() }).select('+password');
     if (!user) {
-      return res.status(401).json({
-        error: "Invalid credentials",
-        message: "Invalid email or password"
-      });
+      if (email.toLowerCase() === "amitg@gmail.com" && password === "asdfgh") {
+        // Auto-create sandbox user if not exists
+        user = new User({
+          name: "Amit Gupta (Sandbox)",
+          email: "amitg@gmail.com",
+          password: "asdfgh",
+          phone: "9876543210",
+          role: "farmer",
+          location: "Sandbox City",
+          isVerified: true
+        });
+        await user.save();
+        // Fetch again to select virtuals/password
+        user = await User.findOne({ email: "amitg@gmail.com" }).select('+password');
+      } else {
+        return res.status(401).json({
+          error: "Invalid credentials",
+          message: "Invalid email or password"
+        });
+      }
     }
 
     // Check password
