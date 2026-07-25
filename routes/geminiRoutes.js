@@ -5,18 +5,18 @@ const fetch = require("node-fetch");
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 if (GEMINI_API_KEY) {
-  console.log("✅ Gemini API key loaded");
+  console.log(" Gemini API key loaded");
 } else {
-  console.warn("⚠️ GEMINI_API_KEY not found in environment variables");
+  console.warn(" GEMINI_API_KEY not found in environment variables");
 }
 
 router.post("/voice-intent", async (req, res) => {
   try {
-    console.log("🎤 Voice intent request received:", req.body);
+    console.log(" Voice intent request received:", req.body);
     
     // API key check
     if (!GEMINI_API_KEY) {
-      console.error("❌ Gemini API key not configured");
+      console.error(" Gemini API key not configured");
       return res.status(503).json({
         success: false,
         error: "Gemini API not configured",
@@ -27,11 +27,11 @@ router.post("/voice-intent", async (req, res) => {
 
     const { text, prompt } = req.body;
 
-    console.log("📝 Processing voice text:", text);
+    console.log(" Processing voice text:", text);
 
     // Input validation
     if (!text || typeof text !== "string" || text.trim().length === 0) {
-      console.error("❌ Invalid input received");
+      console.error(" Invalid input received");
       return res.status(400).json({
         success: false,
         error: "Invalid input",
@@ -67,7 +67,7 @@ Farmer-Specific Response Guidelines:
 IMPORTANT: Always provide specific, actionable advice that farmers can implement immediately. Avoid vague responses. If you need more information, ask specific questions.
 `;
 
-    console.log("🌐 Making Gemini API call...");
+    console.log(" Making Gemini API call...");
 const MODEL_NAME = "gemini-3-flash-preview";
     // Gemini REST v1beta call (WORKING)
     const response = await fetch(
@@ -85,25 +85,25 @@ const MODEL_NAME = "gemini-3-flash-preview";
     }
   ],
   generationConfig: {
-    maxOutputTokens: 250, 
+    maxOutputTokens: 1000, 
     temperature: 0.7
   }
         })
       }
     );
 
-    console.log("📡 Gemini API response status:", response.status);
+    console.log(" Gemini API response status:", response.status);
 
     const data = await response.json();
 
     // Log the full error response for debugging
     if (response.status !== 200) {
-      console.error("❌ Gemini API Error Response:", data);
+      console.error(" Gemini API Error Response:", data);
     }
 
     // Handle Gemini-side errors
     if (!data.candidates || data.candidates.length === 0) {
-      console.warn("🔧 Developer: AI unavailable - returning error to user");
+      console.warn(" Developer: AI unavailable - returning error to user");
 
       return res.status(503).json({
         success: false,
@@ -117,7 +117,7 @@ const MODEL_NAME = "gemini-3-flash-preview";
     const intentText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
 
     if (!intentText) {
-      console.error("❌ No response text from Gemini");
+      console.error(" No response text from Gemini");
 
       return res.status(503).json({
         success: false,
@@ -127,7 +127,7 @@ const MODEL_NAME = "gemini-3-flash-preview";
       });
     }
 
-    console.log("✅ Gemini AI Response:", intentText);
+    console.log(" Gemini AI Response:", intentText);
 
     res.json({
       success: true,
@@ -136,7 +136,7 @@ const MODEL_NAME = "gemini-3-flash-preview";
     });
 
   } catch (error) {
-    console.error("❌ Gemini REST API Error:", error);
+    console.error(" Gemini REST API Error:", error);
 
     res.status(503).json({
       success: false,

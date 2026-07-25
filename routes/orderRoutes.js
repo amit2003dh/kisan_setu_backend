@@ -323,11 +323,15 @@ router.put("/:id/status", authMiddleware, async (req, res) => {
 // Single order by ID
 router.get("/:orderId", authMiddleware, async (req, res) => {
   try {
+    const mongoose = require("mongoose");
+    if (!mongoose.Types.ObjectId.isValid(req.params.orderId)) {
+      return res.status(404).json({ error: "Order not found", message: "Order not found" });
+    }
     const order = await Order.findById(req.params.orderId);
-    if (!order) return res.status(404).json({ error: "Order not found" });
+    if (!order) return res.status(404).json({ error: "Order not found", message: "Order not found" });
     res.json(order);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(404).json({ error: "Order not found", message: err.message });
   }
 });
 
@@ -359,16 +363,17 @@ router.post("/:orderId/message", authMiddleware, async (req, res) => {
 
 router.get("/:orderId/messages", authMiddleware, async (req, res) => {
   try {
-    const order = await Order.findById(req.params.orderId);
-    if (!order) return res.status(404).json({ error: "Order not found" });
-
+    const mongoose = require("mongoose");
+    if (!mongoose.Types.ObjectId.isValid(req.params.orderId)) {
+      return res.json([]);
+    }
     const allMessages = await Message.find({ orderId: req.params.orderId })
       .populate("senderId", "name email role")
       .sort({ createdAt: 1 });
 
     res.json(allMessages);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.json([]);
   }
 });
 
