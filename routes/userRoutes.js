@@ -7,7 +7,7 @@ const User = require("../models/User");
 const Cart = require("../models/Cart");
 const authMiddleware = require("../middleware/auth");
 
-const JWT_SECRET = process.env.JWT_SECRET || "kisansetu_secret_key_change_in_production";
+const JWT_SECRET = (process.env.JWT_SECRET ? process.env.JWT_SECRET.replace(/"/g, "") : "") || "amitkisan";
 
 const uploadDir = "uploads/profiles";
 if (!fs.existsSync(uploadDir)) {
@@ -158,30 +158,35 @@ router.put("/profile", authMiddleware, async (req, res) => {
 });
 
 // Upload profile photo
-router.post("/profile/photo", authMiddleware, upload.single("photo"), async (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+const profileUpload = upload.single("profilePhoto");
+const photoUpload = upload.single("photo");
 
-    const user = await User.findById(req.userId);
+const handlePhotoUpload = async (req, res) => {
+  try {
+    const file = req.file || (req.files && req.files.length > 0 ? req.files[0] : null);
+    if (!file) return res.status(400).json({ error: "No file uploaded" });
+
+    const photoPath = `/uploads/profiles/${file.filename}`;
+    const user = await User.findByIdAndUpdate(
+      req.userId,
+      { profilePhoto: photoPath },
+      { new: true }
+    );
+
     if (!user) {
-      if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
       return res.status(404).json({ error: "User not found" });
     }
 
-    if (user.profilePhoto) {
-      const oldPath = user.profilePhoto.replace(/^\/uploads\//, "uploads/");
-      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-    }
-
-    user.profilePhoto = `/uploads/profiles/${req.file.filename}`;
-    await user.save();
-
-    res.json({ success: true, user: user.toJSON() });
+    res.json({ success: true, profilePhoto: photoPath, user: user.toJSON() });
   } catch (err) {
-    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    console.error("Profile photo upload error:", err);
     res.status(500).json({ error: "Upload failed", message: err.message });
   }
-});
+};
+
+router.post("/profile/photo", authMiddleware, upload.any(), handlePhotoUpload);
+router.post("/profile-photo", authMiddleware, upload.any(), handlePhotoUpload);
 
 // Get user cart
 router.get("/cart", authMiddleware, async (req, res) => {
